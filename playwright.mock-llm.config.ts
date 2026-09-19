@@ -20,23 +20,26 @@
 
 import { defineConfig, devices } from "@playwright/test";
 import { randomBytes } from "node:crypto";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join } from "node:path";
+import {
+  createMockLlmRunContext,
+  installMockLlmRunCleanup,
+} from "./tests/e2e/mock-llm/run-isolation";
 
-// ── Port allocation (separate from live E2E / dev to avoid collisions) ─
-const MOCK_LLM_PORT = process.env.MOCK_LLM_PORT ?? "9999";
+const runContext = createMockLlmRunContext();
+installMockLlmRunCleanup(runContext);
 
-// The agent-canvas binary exposes a single ingress port that routes:
-//   /api/automation/* → automation backend
-//   /api/*, /sockets  → agent-server
-//   /*                → static frontend
-// Tests use this single URL for both the browser (baseURL) and backend API
-// calls (the ingress proxies /api/* transparently).
-const INGRESS_PORT = process.env.MOCK_LLM_INGRESS_PORT ?? "18300";
-
-// A second static-server instance for public-mode auth tests. It serves
-// the same build/ directory with --auth-required (no baked session key)
-// and proxies to the same backend.
-const PUBLIC_MODE_PORT = process.env.MOCK_LLM_PUBLIC_MODE_PORT ?? "18301";
+// ── Per-run port reservation ──────────────────────────────────────────
+// The first local run keeps the historical ports. Concurrent runs receive
+// a separate leased block, so no test process can silently attach to another
+// run's mock server or stack. Explicit MOCK_LLM_*_PORT overrides are preserved.
+const MOCK_LLM_PORT = String(runContext.ports.mockLlm);
+const INGRESS_PORT = String(runContext.ports.ingress);
+const PUBLIC_MODE_PORT = String(runContext.ports.publicMode);
+const BACKEND_PORT = String(runContext.ports.backend);
+const AUTOMATION_PORT = String(runContext.ports.automation);
+const VITE_PORT = String(runContext.ports.vite);
+const VSCODE_PORT = String(runContext.ports.vscode);
 
 // ── Session API key ────────────────────────────────────────────────────
 const sessionApiKey =
@@ -44,13 +47,13 @@ const sessionApiKey =
   randomBytes(32).toString("hex");
 process.env.MOCK_LLM_SESSION_API_KEY = sessionApiKey;
 
-// ── State directory (isolated per test run) ────────────────────────────
-const STATE_DIR = resolve(".tmp/mock-llm-state");
+// ── State directory (unique per test run) ──────────────────────────────
+const STATE_DIR = runContext.paths.stateDir;
 
 // Automation DB lives at $parent_of_STATE_DIR/automation/automations.db,
-// mirroring docker/entrypoint.sh which uses $HOME/.openhands/automation/automations.db.
-// Both STATE_DIR and AUTOMATION_DB_DIR must be cleaned between runs to avoid stale data.
-const AUTOMATION_DB_DIR = join(dirname(STATE_DIR), "automation");
+// mirroring docker/entrypoint.sh. The run context pre-cleans only paths it
+// owns and removes them when Playwright exits.
+const AUTOMATION_DB_DIR = runContext.paths.automationDbDir;
 
 // ── URLs ───────────────────────────────────────────────────────────────
 const INGRESS_URL = `http://localhost:${INGRESS_PORT}/`;
@@ -66,6 +69,12 @@ const MOCK_LLM_PYTHON = process.env.MOCK_LLM_PYTHON ?? "python3";
 process.env.MOCK_LLM_BACKEND_URL = `http://localhost:${INGRESS_PORT}`;
 process.env.MOCK_LLM_PORT = MOCK_LLM_PORT;
 process.env.MOCK_LLM_PUBLIC_MODE_URL = `http://localhost:${PUBLIC_MODE_PORT}`;
+process.env.MOCK_LLM_SKILL_REPOS_HOST_DIR =
+  runContext.paths.skillReposHostDir;
+process.env.MOCK_LLM_USER_SKILLS_HOST_DIR =
+  runContext.paths.userSkillsHostDir;
+process.env.MOCK_LLM_FOLDER_WORKSPACE_HOST_DIR =
+  runContext.paths.folderWorkspaceHostDir;
 
 function shellQuote(value: string) {
   return `'${value.replaceAll("'", "'\\''")}'`;
@@ -119,7 +128,7 @@ export default defineConfig({
       command: `${MOCK_LLM_PYTHON} tests/e2e/mock-llm/scripts/mock-llm-server.py --port ${MOCK_LLM_PORT}`,
       url: MOCK_LLM_URL,
       timeout: 30_000,
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: false,
       stdout: "pipe",
       stderr: "pipe",
     },
@@ -146,6 +155,13 @@ export default defineConfig({
           "exec env",
           envAssignment("OH_CANVAS_SAFE_STATE_DIR", STATE_DIR),
           envAssignment("PORT", INGRESS_PORT),
+          envAssignment("OH_CANVAS_SAFE_BACKEND_PORT", BACKEND_PORT),
+          envAssignment(
+            "OH_CANVAS_SAFE_AUTOMATION_PORT",
+            AUTOMATION_PORT,
+          ),
+          envAssignment("OH_CANVAS_SAFE_VITE_PORT", VITE_PORT),
+          envAssignment("OH_CANVAS_SAFE_VSCODE_PORT", VSCODE_PORT),
           envAssignment("LOCAL_BACKEND_API_KEY", sessionApiKey),
           "VITE_DO_NOT_TRACK=1",
           "VITE_ENABLE_BROWSER_TOOLS=false",
@@ -163,7 +179,7 @@ export default defineConfig({
       // auth on the list endpoint (confirmed in CI).
       url: `http://localhost:${INGRESS_PORT}/api/automation/v1`,
       timeout: 180_000, // allow extra time for build + agent-server + automation startup
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: false,
       // Without this, Playwright tears the webServer down with
       // process.kill(-pid, "SIGKILL"), which the stack cannot catch. Its
       // services are spawned detached (see scripts/dev-process-utils.mjs), so
@@ -176,23 +192,22 @@ export default defineConfig({
       gracefulShutdown: { signal: "SIGTERM", timeout: 15_000 },
     },
     // 3. Public-mode static server — same build/, same backend, but with
-    //    --auth-required (no session key injected). The agent-server's
-    //    internal ports are the defaults from config/defaults.json (18000
-    //    for agent-server, 18001 for automation).
+    //    --auth-required (no session key injected). It proxies to this
+    //    run's reserved agent-server and automation ports.
     {
       command: [
         "exec node scripts/static-server.mjs",
         "--dir build",
         `--port ${PUBLIC_MODE_PORT}`,
         "--auth-required",
-        "--route /api/automation=http://localhost:18001",
-        "--route /api=http://localhost:18000",
-        "--route /server_info=http://localhost:18000",
-        "--route /sockets=http://localhost:18000",
+        `--route /api/automation=http://localhost:${AUTOMATION_PORT}`,
+        `--route /api=http://localhost:${BACKEND_PORT}`,
+        `--route /server_info=http://localhost:${BACKEND_PORT}`,
+        `--route /sockets=http://localhost:${BACKEND_PORT}`,
       ].join(" "),
       url: `http://localhost:${PUBLIC_MODE_PORT}/`,
       timeout: 15_000,
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: false,
     },
   ],
 });
