@@ -125,14 +125,10 @@ test.describe("skill loading: project, user, and deletion", () => {
     if (match?.[1]) conversationIds.add(decodeURIComponent(match[1]));
 
     for (const id of Array.from(conversationIds)) {
-      try {
-        await deleteConversation(request, id);
-        conversationIds.delete(id);
-      } catch {
-        // best-effort cleanup
-      }
+      await deleteConversation(request, id);
+      conversationIds.delete(id);
     }
-    await resetMockLLM(request).catch(() => {});
+    await resetMockLLM(request);
   });
 
   // Track the agent-side workspace path for cleanup (may differ from
