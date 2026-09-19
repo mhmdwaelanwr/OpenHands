@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   targeted:
@@ -36,5 +36,36 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Check formatting
-        run: npx prettier --check playwright.mock-llm.config.ts playwright.mock-llm-docker.config.ts tests/e2e/mock-llm/run-isolation.ts tests/e2e/mock-llm/utils/skill-test-helpers.ts tests/e2e/mock-llm/utils/mock-llm-helpers.ts __tests__/e2e/mock-llm-run-isolation.test.ts tests/e2e/mock-llm/mcp/mock-llm-mcp-github.spec.ts tests/e2e/mock-llm/mcp/mock-llm-mcp-slack-credentials.spec.ts tests/e2e/mock-llm/automations/mock-llm-preset-automation.spec.ts tests/e2e/mock-llm/automations/mock-llm-automation.spec.ts tests/e2e/mock-llm/conversations/mock-llm-conversation.spec.ts tests/e2e/mock-llm/conversations/mock-llm-image-upload.spec.ts tests/e2e/mock-llm/skills/mock-llm-skills.spec.ts tests/e2e/mock-llm/files/mock-llm-files-and-git.spec.ts tests/e2e/mock-llm/home/mock-llm-folder-workspace.spec.ts tests/e2e/mock-llm/settings/mock-llm-model-switch.spec.ts tests/e2e/mock-llm/settings/mock-llm-profile-management.spec.ts tests/e2e/mock-llm/onboarding/mock-llm-onboarding-happy-path.spec.ts AGENTS.md
+      - name: Format changed files
+        shell: bash
+        run: |
+          files=(
+            playwright.mock-llm.config.ts
+            playwright.mock-llm-docker.config.ts
+            tests/e2e/mock-llm/run-isolation.ts
+            tests/e2e/mock-llm/utils/skill-test-helpers.ts
+            tests/e2e/mock-llm/utils/mock-llm-helpers.ts
+            __tests__/e2e/mock-llm-run-isolation.test.ts
+            tests/e2e/mock-llm/mcp/mock-llm-mcp-github.spec.ts
+            tests/e2e/mock-llm/mcp/mock-llm-mcp-slack-credentials.spec.ts
+            tests/e2e/mock-llm/automations/mock-llm-preset-automation.spec.ts
+            tests/e2e/mock-llm/automations/mock-llm-automation.spec.ts
+            tests/e2e/mock-llm/conversations/mock-llm-conversation.spec.ts
+            tests/e2e/mock-llm/conversations/mock-llm-image-upload.spec.ts
+            tests/e2e/mock-llm/skills/mock-llm-skills.spec.ts
+            tests/e2e/mock-llm/files/mock-llm-files-and-git.spec.ts
+            tests/e2e/mock-llm/home/mock-llm-folder-workspace.spec.ts
+            tests/e2e/mock-llm/settings/mock-llm-model-switch.spec.ts
+            tests/e2e/mock-llm/settings/mock-llm-profile-management.spec.ts
+            tests/e2e/mock-llm/onboarding/mock-llm-onboarding-happy-path.spec.ts
+            AGENTS.md
+          )
+          npx prettier --write "${files[@]}"
+          npx prettier --check "${files[@]}"
+          git add -- "${files[@]}"
+          if ! git diff --cached --quiet; then
+            git config user.name "Mohamed Anwar"
+            git config user.email "mhmdwaelanwr@gmail.com"
+            git commit -m "style: format mock LLM isolation changes"
+            git push origin HEAD:fix/mock-llm-run-isolation-15485
+          fi
