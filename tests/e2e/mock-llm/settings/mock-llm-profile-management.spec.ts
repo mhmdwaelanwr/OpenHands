@@ -96,8 +96,6 @@ test.describe("active profile deletion + reconciliation", () => {
       await waitForTestId(page, "add-llm-profile");
       await deleteProfileIfExists(page, ACTIVE_PROFILE);
       await deleteProfileIfExists(page, INACTIVE_PROFILE);
-    } catch {
-      // best-effort
     } finally {
       await page.close();
     }
@@ -249,12 +247,8 @@ test.describe("same-model profile identity", () => {
 
   test.afterEach(async ({ request }) => {
     for (const id of Array.from(conversationIds)) {
-      try {
-        await deleteConversation(request, id);
-        conversationIds.delete(id);
-      } catch {
-        // best-effort
-      }
+      await deleteConversation(request, id);
+      conversationIds.delete(id);
     }
   });
 
@@ -270,16 +264,10 @@ test.describe("same-model profile identity", () => {
       await waitForTestId(page, "add-llm-profile");
       await deleteProfileIfExists(page, PROFILE_ALPHA);
       await deleteProfileIfExists(page, PROFILE_BETA);
-    } catch {
-      // best-effort
     } finally {
       await page.close();
     }
-    try {
-      await resetMockLLM(request);
-    } catch {
-      // best-effort
-    }
+    await resetMockLLM(request);
   });
 
   test("chat header shows the correct profile when two profiles share the same model", async ({
@@ -395,8 +383,6 @@ test.describe("OpenHands provider hidden base_url preservation", () => {
       await dismissAnalyticsModal(page);
       await waitForTestId(page, "add-llm-profile");
       await deleteProfileIfExists(page, OPENHANDS_PROFILE);
-    } catch {
-      // best-effort
     } finally {
       await page.close();
     }
