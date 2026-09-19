@@ -56,12 +56,8 @@ test.describe("mock-LLM /model slash command", () => {
 
   test.afterEach(async ({ request }) => {
     for (const id of Array.from(conversationIds)) {
-      try {
-        await deleteConversation(request, id);
-        conversationIds.delete(id);
-      } catch {
-        // best-effort cleanup
-      }
+      await deleteConversation(request, id);
+      conversationIds.delete(id);
     }
   });
 
@@ -75,16 +71,10 @@ test.describe("mock-LLM /model slash command", () => {
       await dismissAnalyticsModal(page);
       await waitForTestId(page, "add-llm-profile");
       await deleteProfileIfExists(page, PROFILE_B_NAME);
-    } catch {
-      // best-effort
     } finally {
       await page.close();
     }
-    try {
-      await resetMockLLM(request);
-    } catch {
-      // best-effort
-    }
+    await resetMockLLM(request);
   });
 
   // ── Step 1: Configure LLM + create switch-target profile + register trajectory
