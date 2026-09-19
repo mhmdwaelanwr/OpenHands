@@ -23,7 +23,9 @@ import type {
 } from "@playwright/test/reporter";
 
 // Playwright runs from the project root (where the config file lives).
-const MARKER_DIR = join(process.cwd(), ".mock-llm-markers");
+const MARKER_DIR = process.env.MOCK_LLM_MARKER_DIR
+  ? join(process.cwd(), process.env.MOCK_LLM_MARKER_DIR)
+  : join(process.cwd(), ".mock-llm-markers");
 
 interface TestRecord {
   title: string;
