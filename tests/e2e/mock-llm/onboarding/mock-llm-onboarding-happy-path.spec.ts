@@ -51,20 +51,13 @@ test.describe("onboarding happy path", () => {
 
   test.afterEach(async ({ request }) => {
     for (const id of Array.from(conversationIds)) {
-      try {
-        await deleteConversation(request, id);
-        conversationIds.delete(id);
-      } catch {
-        // best-effort
-      }
+      await deleteConversation(request, id);
+      conversationIds.delete(id);
     }
     // Reset the mock LLM to its default trajectory so subsequent specs
-    // start with a clean slate.
-    try {
-      await resetMockLLM(request);
-    } catch {
-      // best-effort
-    }
+    // start with a clean slate. Cleanup failures are actionable and must stop
+    // the serial suite rather than contaminating the next test.
+    await resetMockLLM(request);
   });
 
   test("completes the full onboarding flow and launches a conversation", async ({
