@@ -29,8 +29,14 @@
 
 import { defineConfig, devices } from "@playwright/test";
 import { randomBytes } from "node:crypto";
-import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
+import {
+  createMockLlmRunContext,
+  installMockLlmRunCleanup,
+} from "./tests/e2e/mock-llm/run-isolation";
+
+const runContext = createMockLlmRunContext();
+installMockLlmRunCleanup(runContext);
 
 // ── Docker image ────────────────────────────────────────────────────────
 const DOCKER_IMAGE =
@@ -39,19 +45,17 @@ const DOCKER_IMAGE =
 // Container name for cleanup — unique per run to avoid collisions.
 const CONTAINER_NAME =
   process.env.MOCK_LLM_CONTAINER_NAME ??
-  `agent-canvas-mock-llm-${randomBytes(4).toString("hex")}`;
+  `agent-canvas-mock-llm-${runContext.runId}`;
 
-// ── Port allocation (separate from live E2E / dev to avoid collisions) ─
-const MOCK_LLM_PORT = process.env.MOCK_LLM_PORT ?? "9999";
-
-// The Docker container exposes a single port for the unified ingress.
-// With --network host this is accessible at localhost directly.
-const INGRESS_PORT = process.env.MOCK_LLM_INGRESS_PORT ?? "18300";
-
-// Public-mode static server — runs inside the Docker container when
-// PUBLIC_MODE_PORT is set (see docker/entrypoint.sh). With --network host
-// the port is accessible from the host at localhost directly.
-const PUBLIC_MODE_PORT = process.env.MOCK_LLM_PUBLIC_MODE_PORT ?? "18301";
+// ── Per-run port reservation ──────────────────────────────────────────
+// Docker uses --network host on Linux, so its internal services also need
+// distinct host ports when two test runs overlap.
+const MOCK_LLM_PORT = String(runContext.ports.mockLlm);
+const INGRESS_PORT = String(runContext.ports.ingress);
+const PUBLIC_MODE_PORT = String(runContext.ports.publicMode);
+const BACKEND_PORT = String(runContext.ports.backend);
+const AUTOMATION_PORT = String(runContext.ports.automation);
+const VSCODE_PORT = String(runContext.ports.vscode);
 
 // ── Session API key ────────────────────────────────────────────────────
 const sessionApiKey =
@@ -92,25 +96,23 @@ if (!process.env.MOCK_LLM_AGENT_URL) {
 // We volume-mount these into the container so the agent-server can see them.
 
 // Project skills: host creates repos here, container sees them at a fixed path.
-const SKILL_REPOS_HOST_DIR = resolve(".tmp/mock-llm-skill-repos");
+const SKILL_REPOS_HOST_DIR = runContext.paths.skillReposHostDir;
 const SKILL_REPOS_CONTAINER_DIR = "/tmp/mock-llm-skill-repos";
-mkdirSync(SKILL_REPOS_HOST_DIR, { recursive: true });
+process.env.MOCK_LLM_SKILL_REPOS_HOST_DIR = SKILL_REPOS_HOST_DIR;
 process.env.MOCK_LLM_SKILL_REPOS_CONTAINER_DIR = SKILL_REPOS_CONTAINER_DIR;
 
 // User skills: host creates skill files here, container mounts them at
 // the agent-server's expected ~/.openhands/skills/ path.
-const USER_SKILLS_HOST_DIR = resolve(".tmp/mock-llm-user-skills");
+const USER_SKILLS_HOST_DIR = runContext.paths.userSkillsHostDir;
 const USER_SKILLS_CONTAINER_DIR = "/home/openhands/.openhands/skills";
-mkdirSync(USER_SKILLS_HOST_DIR, { recursive: true });
 process.env.MOCK_LLM_USER_SKILLS_HOST_DIR = USER_SKILLS_HOST_DIR;
 
 // ── Folder-workspace test support ──────────────────────────────────────
 // The folder-workspace test creates a temp directory on the host that the
 // agent-server's folder browser needs to list. Mount a shared directory into
 // the container at the same path so the agent-server can see it.
-const FOLDER_WORKSPACE_HOST_DIR = resolve(".tmp/e2e-folder-workspace-test");
+const FOLDER_WORKSPACE_HOST_DIR = runContext.paths.folderWorkspaceHostDir;
 const FOLDER_WORKSPACE_CONTAINER_DIR = "/tmp/e2e-folder-workspace-test";
-mkdirSync(FOLDER_WORKSPACE_HOST_DIR, { recursive: true });
 process.env.MOCK_LLM_FOLDER_WORKSPACE_HOST_DIR = FOLDER_WORKSPACE_HOST_DIR;
 process.env.MOCK_LLM_FOLDER_WORKSPACE_CONTAINER_DIR =
   FOLDER_WORKSPACE_CONTAINER_DIR;
@@ -182,7 +184,7 @@ export default defineConfig({
       command: `${MOCK_LLM_PYTHON} tests/e2e/mock-llm/scripts/mock-llm-server.py --port ${MOCK_LLM_PORT}`,
       url: MOCK_LLM_URL,
       timeout: 30_000,
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: false,
       stdout: "pipe",
       stderr: "pipe",
     },
@@ -216,6 +218,9 @@ export default defineConfig({
         // folder browser can list/navigate it inside the container.
         `-v ${FOLDER_WORKSPACE_HOST_DIR}:${FOLDER_WORKSPACE_CONTAINER_DIR}`,
         `-e PORT=${INGRESS_PORT}`,
+        `-e AGENT_SERVER_PORT=${BACKEND_PORT}`,
+        `-e AUTOMATION_PORT=${AUTOMATION_PORT}`,
+        `-e VSCODE_PORT=${VSCODE_PORT}`,
         `-e SESSION_API_KEY=${sessionApiKey}`,
         `-e OH_SESSION_API_KEYS_0=${sessionApiKey}`,
         `-e PUBLIC_MODE_PORT=${PUBLIC_MODE_PORT}`,
@@ -230,7 +235,7 @@ export default defineConfig({
       // session-key auth on the list endpoint.
       url: `http://localhost:${INGRESS_PORT}/api/automation/v1`,
       timeout: 180_000, // Docker pull + all services startup
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: false,
     },
   ],
   // globalTeardown stops the Docker container when Playwright exits.
