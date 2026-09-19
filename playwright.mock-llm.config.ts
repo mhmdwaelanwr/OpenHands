@@ -20,7 +20,6 @@
 
 import { defineConfig, devices } from "@playwright/test";
 import { randomBytes } from "node:crypto";
-import { dirname, join } from "node:path";
 import {
   createMockLlmRunContext,
   installMockLlmRunCleanup,
