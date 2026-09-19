@@ -334,8 +334,11 @@ export async function deleteConversation(
   request: APIRequestContext,
   conversationId: string,
 ) {
-  const resp = await request.delete(
-    `${BACKEND_URL}/api/conversations/${encodeURIComponent(conversationId)}`,
+  const url = `${BACKEND_URL}/api/conversations/${encodeURIComponent(conversationId)}`;
+  const resp = await retryOnTransient(
+    request,
+    "DELETE",
+    url,
     { headers: { "X-Session-API-Key": SESSION_API_KEY } },
   );
   if (!resp.ok() && resp.status() !== 404) {
@@ -893,8 +896,31 @@ export async function activateTrajectory(
  * Also clears the stored completion-request history.
  */
 export async function resetMockLLM(request: APIRequestContext) {
-  const resp = await request.post(`${MOCK_LLM_BASE_URL}/admin/reset`);
+  const resp = await retryOnTransient(
+    request,
+    "POST",
+    `${MOCK_LLM_BASE_URL}/admin/reset`,
+    {},
+  );
   expect(resp.ok(), `Reset mock LLM: ${resp.status()}`).toBe(true);
+}
+
+export async function resetMcpConfig(request: APIRequestContext) {
+  const resp = await retryOnTransient(
+    request,
+    "PATCH",
+    `${BACKEND_URL}/api/settings`,
+    {
+      headers: {
+        "X-Session-API-Key": SESSION_API_KEY,
+        "Content-Type": "application/json",
+      },
+      data: { agent_settings_diff: { mcp_config: null } },
+    },
+  );
+  if (!resp.ok()) {
+    throw new Error(`Failed to reset MCP config: ${resp.status()}`);
+  }
 }
 
 /**
