@@ -30,6 +30,9 @@ jobs:
       - name: Run isolation unit tests
         run: npx vitest run __tests__/e2e/mock-llm-run-isolation.test.ts
 
+      - name: Generate i18n declarations
+        run: npm run make-i18n
+
       - name: Typecheck
         run: npm run typecheck
 
