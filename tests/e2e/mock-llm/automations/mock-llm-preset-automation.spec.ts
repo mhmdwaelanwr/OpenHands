@@ -117,12 +117,8 @@ test.describe("preset automation → slash command conversation", () => {
     if (match?.[1]) conversationIds.add(decodeURIComponent(match[1]));
 
     for (const id of Array.from(conversationIds)) {
-      try {
-        await deleteConversation(request, id);
-        conversationIds.delete(id);
-      } catch {
-        // best-effort cleanup
-      }
+      await deleteConversation(request, id);
+      conversationIds.delete(id);
     }
     await resetMockLLM(request);
     // Clear any MCP servers so subsequent tests start clean. Both cleanup
