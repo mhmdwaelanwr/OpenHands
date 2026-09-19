@@ -65,23 +65,15 @@ test.describe("mock-LLM agent-server conversation", () => {
     // needs it to verify conversation resume from the sidebar.
     for (const id of Array.from(conversationIds)) {
       if (id === step3ConversationId) continue;
-      try {
-        await deleteConversation(request, id);
-        conversationIds.delete(id);
-      } catch {
-        // best-effort cleanup
-      }
+      await deleteConversation(request, id);
+      conversationIds.delete(id);
     }
   });
 
   // Safety net: delete the shared step3 conversation after all tests complete.
   test.afterAll(async ({ request }) => {
     if (step3ConversationId) {
-      try {
-        await deleteConversation(request, step3ConversationId);
-      } catch {
-        // best-effort
-      }
+      await deleteConversation(request, step3ConversationId);
     }
   });
 
