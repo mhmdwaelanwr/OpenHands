@@ -36,6 +36,7 @@ import {
   routeSessionApiKey,
   dismissAnalyticsModal,
   ensureMockLLMProfileViaAPI,
+  resetMcpConfig,
 } from "../utils/mock-llm-helpers";
 
 // The read-only verification probe the service attaches for Slack.
@@ -156,6 +157,7 @@ test.describe.configure({ mode: "serial" });
 
 test.describe("MCP Test Connection credential verification (Slack)", () => {
   test.beforeEach(async ({ page, request }) => {
+    await resetMcpConfig(request);
     await seedLocalStorage(page);
     // A configured LLM profile keeps the MCP page free of "not configured"
     // banners that could intercept clicks. Done via API for speed.
@@ -163,8 +165,8 @@ test.describe("MCP Test Connection credential verification (Slack)", () => {
   });
 
   test.afterEach(async ({ request }) => {
-    // Reset MCP config so each test starts from a clean installed list.
-    await patchMcpConfig(request, null).catch(() => {});
+    // Surface cleanup failures instead of silently contaminating the next test.
+    await resetMcpConfig(request);
   });
 
   test("install: invalid Slack credentials are blocked with a credential-check error", async ({
