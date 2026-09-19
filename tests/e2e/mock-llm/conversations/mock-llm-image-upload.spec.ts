@@ -61,11 +61,7 @@ test.describe("mock-LLM image upload", () => {
 
   test.afterEach(async ({ request }) => {
     if (conversationId) {
-      try {
-        await deleteConversation(request, conversationId);
-      } catch {
-        // best-effort cleanup
-      }
+      await deleteConversation(request, conversationId);
       conversationId = null;
     }
     await resetMockLLM(request);
