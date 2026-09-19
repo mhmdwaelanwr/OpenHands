@@ -33,10 +33,22 @@ import { resolve } from "node:path";
 import {
   createMockLlmRunContext,
   installMockLlmRunCleanup,
+  scopedMockLlmArtifactPath,
 } from "./tests/e2e/mock-llm/run-isolation";
 
 const runContext = createMockLlmRunContext();
 installMockLlmRunCleanup(runContext);
+
+const TEST_RESULTS_DIR = scopedMockLlmArtifactPath(
+  "test-results-mock-llm-docker",
+  runContext,
+);
+const HTML_REPORT_DIR = scopedMockLlmArtifactPath(
+  "playwright-report-mock-llm-docker",
+  runContext,
+);
+const MARKER_DIR = scopedMockLlmArtifactPath(".mock-llm-markers", runContext);
+process.env.MOCK_LLM_MARKER_DIR = MARKER_DIR;
 
 // ── Docker image ────────────────────────────────────────────────────────
 const DOCKER_IMAGE =
@@ -152,17 +164,17 @@ export default defineConfig({
   globalTimeout: process.env.CI ? ciGlobalTimeoutMs : 0, // 20 min hard cap in CI
   reporter: [
     ["line"],
-    ["json", { outputFile: "test-results-mock-llm-docker/results.json" }],
+    ["json", { outputFile: `${TEST_RESULTS_DIR}/results.json` }],
     [
       "html",
       {
-        outputFolder: "playwright-report-mock-llm-docker",
+        outputFolder: HTML_REPORT_DIR,
         open: "never",
       },
     ],
     ["./tests/e2e/mock-llm/reporters/done-marker-reporter.ts"],
   ],
-  outputDir: "test-results-mock-llm-docker",
+  outputDir: TEST_RESULTS_DIR,
   use: {
     baseURL: INGRESS_URL,
     screenshot: "only-on-failure",
