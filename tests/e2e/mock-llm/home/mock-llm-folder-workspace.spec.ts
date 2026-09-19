@@ -84,22 +84,15 @@ test.describe("mock-LLM folder browser → workspace → conversation", () => {
 
     // Cleanup conversations created during the test
     for (const id of conversationIds) {
-      try {
-        await deleteConversation(request, id);
-      } catch {
-        // best-effort
-      }
+      await deleteConversation(request, id);
     }
     conversationIds.clear();
   });
 
   test.afterAll(async () => {
-    // Remove the test directory (host-side path)
-    try {
-      fs.rmSync(HOST_DIR_BASE, { recursive: true, force: true });
-    } catch {
-      // best-effort
-    }
+    // A failed host-fixture cleanup is actionable: surface it rather than
+    // leaving state that can contaminate a later local run.
+    fs.rmSync(HOST_DIR_BASE, { recursive: true, force: true });
   });
 
   // ── Step 1: Browse to a folder and add it as a workspace ────────────
