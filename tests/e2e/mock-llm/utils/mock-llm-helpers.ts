@@ -335,12 +335,9 @@ export async function deleteConversation(
   conversationId: string,
 ) {
   const url = `${BACKEND_URL}/api/conversations/${encodeURIComponent(conversationId)}`;
-  const resp = await retryOnTransient(
-    request,
-    "DELETE",
-    url,
-    { headers: { "X-Session-API-Key": SESSION_API_KEY } },
-  );
+  const resp = await retryOnTransient(request, "DELETE", url, {
+    headers: { "X-Session-API-Key": SESSION_API_KEY },
+  });
   if (!resp.ok() && resp.status() !== 404) {
     throw new Error(
       `Failed to delete conversation ${conversationId}: ${resp.status()}`,

@@ -333,7 +333,9 @@ test.describe("MCP GitHub server install flow", () => {
     await page.getByTestId("mcp-custom-editor-delete").click();
     await page.getByTestId("confirm-button").click();
     await expect(page.locator('[data-server-id="docs"]')).not.toBeVisible();
-    expect(mutationRequests.map(({ method, pathname }) => `${method} ${pathname}`)).toEqual([
+    expect(
+      mutationRequests.map(({ method, pathname }) => `${method} ${pathname}`),
+    ).toEqual([
       "POST /api/settings/mcp/docs",
       "PATCH /api/settings/mcp/docs",
       "DELETE /api/settings/mcp/docs",

@@ -136,9 +136,9 @@ test.describe("onboarding happy path", () => {
       await allToggle.dispatchEvent("click");
 
       // Wait for the advanced form
-      await expect(
-        page.getByTestId("llm-settings-form-advanced"),
-      ).toBeVisible({ timeout: 10_000 });
+      await expect(page.getByTestId("llm-settings-form-advanced")).toBeVisible({
+        timeout: 10_000,
+      });
 
       // Fill in model
       const modelInput = page.getByTestId("llm-custom-model-input");
@@ -214,7 +214,10 @@ test.describe("onboarding happy path", () => {
             page.evaluate(() =>
               window.localStorage.getItem("openhands-onboarded"),
             ),
-          { message: "openhands-onboarded should be '1' after completing the flow" },
+          {
+            message:
+              "openhands-onboarded should be '1' after completing the flow",
+          },
         )
         .toBe("1");
     });

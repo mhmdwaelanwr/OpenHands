@@ -68,10 +68,8 @@ const MOCK_LLM_PYTHON = process.env.MOCK_LLM_PYTHON ?? "python3";
 process.env.MOCK_LLM_BACKEND_URL = `http://localhost:${INGRESS_PORT}`;
 process.env.MOCK_LLM_PORT = MOCK_LLM_PORT;
 process.env.MOCK_LLM_PUBLIC_MODE_URL = `http://localhost:${PUBLIC_MODE_PORT}`;
-process.env.MOCK_LLM_SKILL_REPOS_HOST_DIR =
-  runContext.paths.skillReposHostDir;
-process.env.MOCK_LLM_USER_SKILLS_HOST_DIR =
-  runContext.paths.userSkillsHostDir;
+process.env.MOCK_LLM_SKILL_REPOS_HOST_DIR = runContext.paths.skillReposHostDir;
+process.env.MOCK_LLM_USER_SKILLS_HOST_DIR = runContext.paths.userSkillsHostDir;
 process.env.MOCK_LLM_FOLDER_WORKSPACE_HOST_DIR =
   runContext.paths.folderWorkspaceHostDir;
 
@@ -155,10 +153,7 @@ export default defineConfig({
           envAssignment("OH_CANVAS_SAFE_STATE_DIR", STATE_DIR),
           envAssignment("PORT", INGRESS_PORT),
           envAssignment("OH_CANVAS_SAFE_BACKEND_PORT", BACKEND_PORT),
-          envAssignment(
-            "OH_CANVAS_SAFE_AUTOMATION_PORT",
-            AUTOMATION_PORT,
-          ),
+          envAssignment("OH_CANVAS_SAFE_AUTOMATION_PORT", AUTOMATION_PORT),
           envAssignment("OH_CANVAS_SAFE_VITE_PORT", VITE_PORT),
           envAssignment("OH_CANVAS_SAFE_VSCODE_PORT", VSCODE_PORT),
           envAssignment("LOCAL_BACKEND_API_KEY", sessionApiKey),

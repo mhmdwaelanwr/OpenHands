@@ -152,10 +152,7 @@ export default defineConfig({
   globalTimeout: process.env.CI ? ciGlobalTimeoutMs : 0, // 20 min hard cap in CI
   reporter: [
     ["line"],
-    [
-      "json",
-      { outputFile: "test-results-mock-llm-docker/results.json" },
-    ],
+    ["json", { outputFile: "test-results-mock-llm-docker/results.json" }],
     [
       "html",
       {

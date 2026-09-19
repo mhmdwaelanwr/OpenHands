@@ -32,8 +32,7 @@ export const STATE_DIR = resolve(
  * worktree machinery picks it up (worktrees only contain committed content).
  */
 export const SKILL_REPOS_DIR = resolve(
-  process.env.MOCK_LLM_SKILL_REPOS_HOST_DIR ??
-    ".tmp/mock-llm-skill-repos",
+  process.env.MOCK_LLM_SKILL_REPOS_HOST_DIR ?? ".tmp/mock-llm-skill-repos",
 );
 
 /**
@@ -50,8 +49,7 @@ export const SKILL_REPOS_AGENT_DIR =
  * container at the agent-server's expected `~/.openhands/skills/` path.
  */
 export const USER_SKILLS_DIR = resolve(
-  process.env.MOCK_LLM_USER_SKILLS_HOST_DIR ??
-    ".tmp/mock-llm-user-skills",
+  process.env.MOCK_LLM_USER_SKILLS_HOST_DIR ?? ".tmp/mock-llm-user-skills",
 );
 
 // ── Skill content builders ───────────────────────────────────────────

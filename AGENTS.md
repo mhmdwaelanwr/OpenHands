@@ -23,14 +23,14 @@
 
 This repo (`OpenHands/OpenHands`) is **only the agent-canvas frontend**. It is one
 piece of a multi-repo system. Before adding code here, check the change belongs in
-*this* repo — several kinds of work belong in a sibling repo instead.
+_this_ repo — several kinds of work belong in a sibling repo instead.
 
-| Repo | Owns | Add code here when… |
-|------|------|---------------------|
-| **`OpenHands/OpenHands`** (this repo) | The React/TypeScript **frontend** (agent-canvas): UI, routes, frontend services in `src/api/` that *consume* backend APIs. | You are changing UI, frontend state, or how the frontend *calls* an existing backend endpoint. |
-| **`OpenHands/software-agent-sdk`** | The Python **SDK + agent-server**: agents, tools, conversations, events, and the REST/WebSocket **API surface** (`openhands-sdk`, `openhands-tools`, `openhands-agent-server`, `openhands-workspace`). | You are adding or changing a backend endpoint, agent/tool behaviour, or server-side logic. New API **endpoints** live here, not in the frontend. |
-| **`OpenHands/typescript-client`** (`@openhands/typescript-client`) | The generated/maintained **TypeScript client** that mirrors the agent-server API. The frontend's *only* sanctioned way to reach the agent-server (see "API Access Rules"). | You are adding client-side **access to an agent-server endpoint** (typed client method, request/response types). API-access code belongs here, **not** re-implemented in this repo. |
-| **`OpenHands/extensions`** (`@openhands/extensions`) | Public **skills, automations, and integrations** (loaded here at build time via `SKILLS_CATALOG`). | You are adding or editing a skill, automation, or MCP integration. |
+| Repo                                                               | Owns                                                                                                                                                                                                   | Add code here when…                                                                                                                                                                 |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`OpenHands/OpenHands`** (this repo)                              | The React/TypeScript **frontend** (agent-canvas): UI, routes, frontend services in `src/api/` that _consume_ backend APIs.                                                                             | You are changing UI, frontend state, or how the frontend _calls_ an existing backend endpoint.                                                                                      |
+| **`OpenHands/software-agent-sdk`**                                 | The Python **SDK + agent-server**: agents, tools, conversations, events, and the REST/WebSocket **API surface** (`openhands-sdk`, `openhands-tools`, `openhands-agent-server`, `openhands-workspace`). | You are adding or changing a backend endpoint, agent/tool behaviour, or server-side logic. New API **endpoints** live here, not in the frontend.                                    |
+| **`OpenHands/typescript-client`** (`@openhands/typescript-client`) | The generated/maintained **TypeScript client** that mirrors the agent-server API. The frontend's _only_ sanctioned way to reach the agent-server (see "API Access Rules").                             | You are adding client-side **access to an agent-server endpoint** (typed client method, request/response types). API-access code belongs here, **not** re-implemented in this repo. |
+| **`OpenHands/extensions`** (`@openhands/extensions`)               | Public **skills, automations, and integrations** (loaded here at build time via `SKILLS_CATALOG`).                                                                                                     | You are adding or editing a skill, automation, or MCP integration.                                                                                                                  |
 
 Common mis-placements to avoid:
 
@@ -44,17 +44,16 @@ Common mis-placements to avoid:
 
 The four repositories have distinct ownership boundaries:
 
-| Repository | Owns |
-|---|---|
-| [`OpenHands/OpenHands`](https://github.com/OpenHands/OpenHands) | Agent Canvas frontend, user-facing control center, backend selection, and local-stack orchestration. |
-| [`OpenHands/software-agent-sdk`](https://github.com/OpenHands/software-agent-sdk) | Python SDK, Agent Server, agent/tool behavior, conversations, workspaces, events, and the canonical server API. |
-| [`OpenHands/typescript-client`](https://github.com/OpenHands/typescript-client) | Browser-compatible TypeScript client and generated/maintained types for the Agent Server API. |
-| [`OpenHands/automation`](https://github.com/OpenHands/automation) | Automation definitions, scheduling, webhooks, run history, and dispatching. It manages when automations run; the Agent Server/SDK executes them. |
+| Repository                                                                        | Owns                                                                                                                                             |
+| --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [`OpenHands/OpenHands`](https://github.com/OpenHands/OpenHands)                   | Agent Canvas frontend, user-facing control center, backend selection, and local-stack orchestration.                                             |
+| [`OpenHands/software-agent-sdk`](https://github.com/OpenHands/software-agent-sdk) | Python SDK, Agent Server, agent/tool behavior, conversations, workspaces, events, and the canonical server API.                                  |
+| [`OpenHands/typescript-client`](https://github.com/OpenHands/typescript-client)   | Browser-compatible TypeScript client and generated/maintained types for the Agent Server API.                                                    |
+| [`OpenHands/automation`](https://github.com/OpenHands/automation)                 | Automation definitions, scheduling, webhooks, run history, and dispatching. It manages when automations run; the Agent Server/SDK executes them. |
 
 The usual dependency direction is `software-agent-sdk` / Agent Server → OpenAPI contract → `typescript-client` → Agent Canvas. Automation scheduling and dispatching flow from Agent Canvas to `automation`, which starts work on the Agent Server/SDK. Put new server behavior and endpoints in `software-agent-sdk`, client access in `typescript-client`, UI and frontend integration in this repository, and scheduling/webhook lifecycle behavior in `automation`.
 
 All pull requests for this repository must comply with [`.agents/skills/custom-codereview-guide.md`](.agents/skills/custom-codereview-guide.md), in addition to the general contribution requirements and CI checks.
-
 
 ## PR Description Human Check
 
@@ -81,11 +80,13 @@ One Canvas-owned PostHog client owns telemetry and app analytics.
 - A business milestone has one canonical event capture. Do not conditionally switch between telemetry and app clients or emit duplicate events.
 
 ### Cloud funnel observability
+
 - OAuth device authorization and Cloud conversation-start requests include the coarse `X-OpenHands-Client: agent_canvas` and `X-OpenHands-Client-Version` headers from `src/api/client-source.ts`. Never put device codes, API keys, conversation content, raw hosts, or other user data in these headers.
 - Production ingress must retain those two headers as structured Datadog facets before source-specific operational queries will work.
 - The consented OSS funnel uses typed `cloud_device_authorization_started`, `cloud_device_authorization_succeeded`, and `cloud_conversation_ready` events from `cloud-funnel-analytics.ts`; React emits the canonical `backend_added` event through `useTracking`.
 
 ### Adding a new event
+
 1. Add a typed function to `useTracking` in `src/hooks/use-tracking.ts`
 2. Add the function to the hook's `return` object
 3. Destructure and call it from the component: `const { trackFoo } = useTracking()`
@@ -99,6 +100,7 @@ events per destination.
 Properties (all values controlled enums or booleans — never raw destination
 URLs, query params, or link text; `current_url` is the standard app-page common
 property, not a destination):
+
 - `link_id` (`OnboardingLinkId`): `configure_llm` | `start_conversation` |
   `schedule_task` | `customize_agent` | `connect_mcp` | `join_slack` |
   `open_docs`
@@ -114,16 +116,17 @@ property, not a destination):
 Instrumented CTAs (sidebar "Getting started" checklist; the row link and its
 preview action CTA intentionally share one `link_id` — same destination):
 
-| Checklist item | Row + preview action | Preview docs link |
-|---|---|---|
-| Add LLM API key | `configure_llm` / `settings` / internal | `open_docs` / `documentation` / external |
-| Start your first chat | `start_conversation` / `conversation` / internal | `open_docs` |
-| Schedule a task | `schedule_task` / `automation` / internal | `open_docs` |
-| Customize your agent | `customize_agent` / `settings` / internal | `open_docs` |
-| Connect an MCP integration | `connect_mcp` / `integration` / internal | `open_docs` |
-| Join the OpenHands Slack | `join_slack` / `community` / external | `open_docs` |
+| Checklist item             | Row + preview action                             | Preview docs link                        |
+| -------------------------- | ------------------------------------------------ | ---------------------------------------- |
+| Add LLM API key            | `configure_llm` / `settings` / internal          | `open_docs` / `documentation` / external |
+| Start your first chat      | `start_conversation` / `conversation` / internal | `open_docs`                              |
+| Schedule a task            | `schedule_task` / `automation` / internal        | `open_docs`                              |
+| Customize your agent       | `customize_agent` / `settings` / internal        | `open_docs`                              |
+| Connect an MCP integration | `connect_mcp` / `integration` / internal         | `open_docs`                              |
+| Join the OpenHands Slack   | `join_slack` / `community` / external            | `open_docs`                              |
 
 Excluded CTAs (per the one-canonical-capture rule above):
+
 - Onboarding-modal wizard controls (back/next/skip/close, agent cards) →
   covered by `onboarding_step_viewed` / `onboarding_completed` /
   `onboarding_skipped`
@@ -139,6 +142,7 @@ Known limitation: middle-click (`auxclick`) opens are not captured; tracking
 uses React `onClick` only and never prevents default navigation.
 
 ### Env vars
+
 `VITE_POSTHOG_API_KEY` is the sole build-time PostHog key. Unconfigured source builds use staging; official release workflows set production explicitly. Precompiled consumers use runtime configuration instead.
 
 ## Runtime Services in Dev Stacks
@@ -290,23 +294,30 @@ you are running inside of — NOT the automation backend.
 When an E2E test fails in CI, use this workflow to diagnose the root cause efficiently:
 
 ### 1. Read the workflow summary first
+
 The mock-LLM E2E workflows write a structured report to the GitHub Actions workflow summary with a test results table, pass/fail status, and collapsible failure details including the Playwright error message. **Start here** — the error message usually reveals whether the failure is a locator mismatch, a timeout, or a missing element.
 
 ### 2. Download CI artifacts
+
 Every failing test run uploads artifacts (`mock-llm-e2e-results` for npm, `mock-llm-docker-e2e-results` for Docker). Download them with:
+
 ```bash
 gh run download <run_id> --repo OpenHands/OpenHands --name mock-llm-e2e-results --dir /tmp/artifacts
 ```
+
 Artifacts contain:
+
 - `test-results-mock-llm/` — per-test directories with `test-failed-N.png` (screenshot at failure) and `error-context.md` (Playwright page snapshot as YAML accessibility tree + test source with the failing line marked)
 - `playwright-report-mock-llm/` — full HTML report (`npx playwright show-report /tmp/artifacts/playwright-report-mock-llm`)
 
 ### 3. Inspect the error-context.md page snapshot
+
 The `error-context.md` file contains a YAML accessibility tree of the entire page at the moment of failure. This is the single most useful artifact — it shows exactly what DOM elements exist, which tabs are selected, what text is in inputs, and whether a component rendered at all. Search for the element your test expects (e.g. `llm-provider-input`) to see if it's present or absent, and check surrounding context (tab selection state, form view mode, etc.) to understand why.
 
 ### 4. Common failure patterns
 
 **"element(s) not found"** — The locator matched zero elements. The component either:
+
 - Didn't render (conditional rendering path not taken — check the page snapshot for what DID render)
 - Has a different `name`/`data-testid` than expected
 - Is behind a lazy-load boundary that hasn't resolved
@@ -318,6 +329,7 @@ The `error-context.md` file contains a YAML accessibility tree of the entire pag
 **Playwright route interception vs real server** — In mock-LLM tests, routes registered with `page.route()` intercept at the browser level before requests reach the real agent-server. However, `page.route()` must be set up BEFORE `page.goto()`. The `showOnboarding` helper handles this correctly (routes are registered before navigation). Non-GET methods should use `route.fallback()` to pass through to the real server.
 
 ### 5. Running locally
+
 ```bash
 npm run test:e2e:mock-llm                    # full suite
 npm run test:e2e:mock-llm -- --headed        # watch in browser
@@ -700,15 +712,14 @@ When adding code that needs a new string, decide up front which rule it falls un
 - Release automation is trunk-based through release-please. Follow `.agents/skills/release.md` for the current process.
 
 - Electron desktop app (`npm run desktop` for dev / `npm run build:desktop` for the binary) starts the same stack as `dev-with-automation.mjs` but inside an Electron BrowserWindow. Two gotchas live here:
-
   1. **Boot race vs. agent-server cold start**: `dev-with-automation.mjs` is a fire-and-forget launcher — `main()` previously returned as soon as `waitForService` saw the ingress proxy respond on `/api/health`, but ingress responds immediately while the agent-server behind it can still be downloading via `uvx` (first run pulls ~50 MB of Python + the SDK from PyPI, easily 30–90s). `electron/main.mjs` used to load the URL as soon as the proxy responded, so the React app booted, called `/server_info`, and got the "Request timeout" popup. Fix: `main()` now accepts an `agentServerReadyTimeoutMs` option and returns `{ config, agentServerReady }`; `electron/main.mjs` runs a two-stage wait — Stage 1 (`waitForUrl`) confirms the ingress proxy is up, Stage 2 (`waitForAgentServer`) hits `${ingress}/server_info` and only accepts `200` (or `401`, which proves the proxy reached a real agent-server) before the BrowserWindow loads. Don't shorten the agent-server timeout below ~3 min — uvx cold start on slow connections genuinely takes that long.
 
   2. **First-run feedback loop**: `dev-with-automation.mjs::setServiceLogListener(cb)` exposes a workspace-wide hook that fires `cb(name, line, level)` for every line of every child-process stdout/stderr/exit. `electron/main.mjs::handleServiceLog` filters for uvx install lines (`Downloading...`, `Resolved N packages...`, etc.) plus agent-server boot markers and forwards them to `loading.html` via `setLoadingStatus()` → `window.__setLoadingStatus()`. The hook is best-effort and swallows listener errors — a buggy embedder must not be able to take down the dev stack.
 
 - Electron desktop packaging — `electron-builder.config.mjs` uses `directories.app: "electron"` so electron/package.json is the app manifest. Even though electron/package.json has zero `dependencies`, app-builder-lib's `collectNodeModulesWithLogging` walks UP from the app dir looking for the first npm workspace that resolves modules. The next dir in line is the project root, where `npm list --json` reports the full hoisted tree (~342 dirs, ~600 MB of Vite/React/Monaco/HeroUI), and electron-builder copies all of it into `Resources/app/node_modules/`. The walk is hardcoded in `app-builder-lib/out/util/appFileCopier.js::collectNodeModulesWithLogging` — there is no config knob to disable it. Creating an empty `electron/node_modules/` does NOT help because the collector falls through to project root when it sees zero deps. **The fix is the `afterPack` hook** (`stripBundledNodeModules` in `electron-builder.config.mjs`): after electron-builder copies everything, the hook `rm -rf`s `Resources/app/node_modules/` (handling macOS `.app` bundle layout and Linux/Windows flat resources/ layout), then copies back the dependency closure of `RUNTIME_PACKAGES` (`sirv` for static-server.mjs, `httpxy` for proxy-utils.mjs/ingress.mjs — ~200 KB total). Effect: `resources/app/` drops from ~598 MB to ~7 MB; total `linux-unpacked/` from ~1 GB to ~365 MB (the rest is Electron + Chromium + the bundled `uv` binary). If a spawned backend script gains a new bare npm import, add the package to `RUNTIME_PACKAGES` — otherwise that service crashes with `ERR_MODULE_NOT_FOUND` only in the installed app. **Testing trap:** an app launched from `dist-electron/` inside the repo resolves bare specifiers against the repo's own `node_modules` (Node ESM resolution walks up from the script file), so a missing runtime package is invisible there — verify packaged builds from a copy outside the repo tree (e.g. `/Applications`). Don't add real deps to electron/package.json — any real dep would survive the strip and would also have to be hand-installed inside electron/ since the project root is npm-hoisted. `build:desktop:universal` and `--linux/--win/--mac` variants all run the same hook.
 
-- Electron desktop app name in dev (macOS) — `npm run desktop` shows the app as "Electron" in the Dock unless `scripts/brand-dev-electron.mjs` (wired as the `predesktop` hook) has run. There are **three independent name sources** and they must all be set; getting one wrong looks like the fix silently not working. (1) `app.name` — Electron-internal, drives the menu bar, About panel and `app.getPath("userData")`. It comes from `productName` in `electron/package.json`, read by Electron's `default_app` in dev and `lib/browser/init` when packaged. Note `default_app` only reads `<arg>/package.json`, so `npm run desktop` must point electron at the `electron/` **directory** — `electron electron/main.mjs` makes it probe `electron/main.mjs/package.json`, miss, and leave `app.name` at the host bundle default. (2) `CFBundleDisplayName` / `CFBundleName` in the running bundle's Info.plist — what `lsappinfo` and `NSRunningApplication.localizedName` report. (3) **The `.app` directory name — this is what the Dock tooltip actually shows.** macOS prefers the bundle's filesystem name over the plist keys; `/Applications/DBeaver.app` displays as "DBeaver" despite `CFBundleName = "DBeaver Community"`. So patching only the plist is NOT enough — the script also renames `node_modules/electron/dist/Electron.app` → `<productName>.app` and rewrites `node_modules/electron/path.txt` to match (`getElectronPath()` in `node_modules/electron/index.js` joins path.txt onto `dist/` and silently re-downloads Electron ~100 MB if it doesn't resolve, so the two must move together). `CFBundleExecutable` is deliberately left as `Electron` — `/Applications/Antigravity.app` ships that exact value and still displays correctly, so it only affects `ps`/Activity Monitor. Editing the plist does not break code signing: Electron's dist is ad-hoc *linker-signed* (`Info.plist=not bound`, `Sealed Resources=none`), so the signature covers only the Mach-O. `npm run build:desktop` is unaffected by the rename — electron-builder packages from `~/Library/Caches/electron/electron-v*.zip`, never from `node_modules/electron/dist`. The packaged app never had the problem: electron-builder emits `<productName>.app` with matching plist keys. Already-running instances keep the name they launched with, so quit and relaunch when verifying.
+- Electron desktop app name in dev (macOS) — `npm run desktop` shows the app as "Electron" in the Dock unless `scripts/brand-dev-electron.mjs` (wired as the `predesktop` hook) has run. There are **three independent name sources** and they must all be set; getting one wrong looks like the fix silently not working. (1) `app.name` — Electron-internal, drives the menu bar, About panel and `app.getPath("userData")`. It comes from `productName` in `electron/package.json`, read by Electron's `default_app` in dev and `lib/browser/init` when packaged. Note `default_app` only reads `<arg>/package.json`, so `npm run desktop` must point electron at the `electron/` **directory** — `electron electron/main.mjs` makes it probe `electron/main.mjs/package.json`, miss, and leave `app.name` at the host bundle default. (2) `CFBundleDisplayName` / `CFBundleName` in the running bundle's Info.plist — what `lsappinfo` and `NSRunningApplication.localizedName` report. (3) **The `.app` directory name — this is what the Dock tooltip actually shows.** macOS prefers the bundle's filesystem name over the plist keys; `/Applications/DBeaver.app` displays as "DBeaver" despite `CFBundleName = "DBeaver Community"`. So patching only the plist is NOT enough — the script also renames `node_modules/electron/dist/Electron.app` → `<productName>.app` and rewrites `node_modules/electron/path.txt` to match (`getElectronPath()` in `node_modules/electron/index.js` joins path.txt onto `dist/` and silently re-downloads Electron ~100 MB if it doesn't resolve, so the two must move together). `CFBundleExecutable` is deliberately left as `Electron` — `/Applications/Antigravity.app` ships that exact value and still displays correctly, so it only affects `ps`/Activity Monitor. Editing the plist does not break code signing: Electron's dist is ad-hoc _linker-signed_ (`Info.plist=not bound`, `Sealed Resources=none`), so the signature covers only the Mach-O. `npm run build:desktop` is unaffected by the rename — electron-builder packages from `~/Library/Caches/electron/electron-v*.zip`, never from `node_modules/electron/dist`. The packaged app never had the problem: electron-builder emits `<productName>.app` with matching plist keys. Already-running instances keep the name they launched with, so quit and relaunch when verifying.
 
-- Electron desktop `node` / `npm` / `npx` PATH bridging — when the packaged `.app` is launched from Finder/Spotlight on macOS, the OS gives it a minimal PATH (`/usr/bin:/bin`). Homebrew, nvm, asdf installs of Node.js are invisible to spawned subprocesses. Two breakages flow from that: (1) backend launcher scripts that do `spawn("node", ...)` can't find Node; (2) most stdio MCP marketplace entries (Slack, GitHub, Figma, etc.) use `command: "npx"`, and when the agent-server tries to spawn them the missing `npx` makes the spawn fail with ENOENT — the SDK reports it as an `error_kind: "connection"` MCP test failure, which the install modal renders as `MCP$TEST_ERROR_CONNECTION` ("Could not reach the server. Check the URL and server type."), a misleading error since no URL is involved. **First fix attempt — DOES NOT WORK for stdio MCPs:** wrap `node`/`npm`/`npx` with thin shell scripts that run Electron with `ELECTRON_RUN_AS_NODE=1` against the package's CLI JS. That bridges the ENOENT but stdio JSON-RPC servers spawned through the wrapper exit with `McpError: Connection closed` before completing the MCP handshake — Electron-as-Node has subtly different stdin/stdout pipe semantics from a vanilla `node` binary when used as a stdio child of a windowed process. **Working fix:** bundle the real Node.js distribution. `scripts/download-node.mjs` downloads the official `node-v<ver>-<platform>-<arch>` tarball from `https://nodejs.org/dist/v<ver>/` into `resources/node/` (gitignored), prunes `include/`, `share/`, docs, and `node_modules/corepack` to keep the size down (~130 MB on Linux x64, dominated by the Node binary itself). Default pin: `NODE_BUNDLE_VERSION = "22.12.0"` (the repo's `engines.node` floor; every 22.x build shares the Electron 42 ABI); override with `NODE_VERSION=`. `electron-builder.config.mjs` ships `resources/node/` as an extraResource → `<Resources>/node/`. `electron/main.mjs::injectBundledNode()` prepends the platform-appropriate bin dir to `PATH` (POSIX: `<Resources>/node/bin`; Windows: `<Resources>/node/`) so subsequent spawns of `node`/`npm`/`npx` resolve to real binaries with full stdio fidelity. It also `chmod +x`'s the binaries on POSIX because electron-builder doesn't always preserve the bit. `injectBundledNode()` is a no-op when `!app.isPackaged` (dev `npm run desktop` uses the developer's system node). `build:desktop` and `build:desktop:universal` both run `download-node.mjs` after `download-uv.mjs`. If the bundled dir is missing at runtime, `injectBundledNode()` logs a loud `[desktop]` warning instead of silently leaving PATH bare. **extraResources will not copy the distribution's root `node_modules`:** `app-builder-lib/src/util/filter.ts::createFilter` returns `false` for any entry whose path relative to the copy root is exactly `node_modules`, *before* the `filter` patterns are consulted, so no `filter` value can opt back in. The Windows Node zip puts npm at `<root>/node_modules/npm` and hits this exactly; POSIX tarballs put it at `<root>/lib/node_modules/npm` and are unaffected — which is why this only broke Windows. Shipped result: a working `node.exe` beside `npm.cmd`/`npx.cmd` shims pointing at a missing `node_modules\npm\bin\npx-cli.js`, so every `npx -y <pkg>` spawn dies with `MODULE_NOT_FOUND` *and* shadows the user's own npm, since the dir is PREPENDED to PATH. The `afterPack` hook (`restoreBundledNodeNpm`) copies that directory into the packed output and then hard-fails the build if `npm-cli.js` still isn't there, mirroring the check `download-node.mjs` already runs on the source tree.
+- Electron desktop `node` / `npm` / `npx` PATH bridging — when the packaged `.app` is launched from Finder/Spotlight on macOS, the OS gives it a minimal PATH (`/usr/bin:/bin`). Homebrew, nvm, asdf installs of Node.js are invisible to spawned subprocesses. Two breakages flow from that: (1) backend launcher scripts that do `spawn("node", ...)` can't find Node; (2) most stdio MCP marketplace entries (Slack, GitHub, Figma, etc.) use `command: "npx"`, and when the agent-server tries to spawn them the missing `npx` makes the spawn fail with ENOENT — the SDK reports it as an `error_kind: "connection"` MCP test failure, which the install modal renders as `MCP$TEST_ERROR_CONNECTION` ("Could not reach the server. Check the URL and server type."), a misleading error since no URL is involved. **First fix attempt — DOES NOT WORK for stdio MCPs:** wrap `node`/`npm`/`npx` with thin shell scripts that run Electron with `ELECTRON_RUN_AS_NODE=1` against the package's CLI JS. That bridges the ENOENT but stdio JSON-RPC servers spawned through the wrapper exit with `McpError: Connection closed` before completing the MCP handshake — Electron-as-Node has subtly different stdin/stdout pipe semantics from a vanilla `node` binary when used as a stdio child of a windowed process. **Working fix:** bundle the real Node.js distribution. `scripts/download-node.mjs` downloads the official `node-v<ver>-<platform>-<arch>` tarball from `https://nodejs.org/dist/v<ver>/` into `resources/node/` (gitignored), prunes `include/`, `share/`, docs, and `node_modules/corepack` to keep the size down (~130 MB on Linux x64, dominated by the Node binary itself). Default pin: `NODE_BUNDLE_VERSION = "22.12.0"` (the repo's `engines.node` floor; every 22.x build shares the Electron 42 ABI); override with `NODE_VERSION=`. `electron-builder.config.mjs` ships `resources/node/` as an extraResource → `<Resources>/node/`. `electron/main.mjs::injectBundledNode()` prepends the platform-appropriate bin dir to `PATH` (POSIX: `<Resources>/node/bin`; Windows: `<Resources>/node/`) so subsequent spawns of `node`/`npm`/`npx` resolve to real binaries with full stdio fidelity. It also `chmod +x`'s the binaries on POSIX because electron-builder doesn't always preserve the bit. `injectBundledNode()` is a no-op when `!app.isPackaged` (dev `npm run desktop` uses the developer's system node). `build:desktop` and `build:desktop:universal` both run `download-node.mjs` after `download-uv.mjs`. If the bundled dir is missing at runtime, `injectBundledNode()` logs a loud `[desktop]` warning instead of silently leaving PATH bare. **extraResources will not copy the distribution's root `node_modules`:** `app-builder-lib/src/util/filter.ts::createFilter` returns `false` for any entry whose path relative to the copy root is exactly `node_modules`, _before_ the `filter` patterns are consulted, so no `filter` value can opt back in. The Windows Node zip puts npm at `<root>/node_modules/npm` and hits this exactly; POSIX tarballs put it at `<root>/lib/node_modules/npm` and are unaffected — which is why this only broke Windows. Shipped result: a working `node.exe` beside `npm.cmd`/`npx.cmd` shims pointing at a missing `node_modules\npm\bin\npx-cli.js`, so every `npx -y <pkg>` spawn dies with `MODULE_NOT_FOUND` _and_ shadows the user's own npm, since the dir is PREPENDED to PATH. The `afterPack` hook (`restoreBundledNodeNpm`) copies that directory into the packed output and then hard-fails the build if `npm-cli.js` still isn't there, mirroring the check `download-node.mjs` already runs on the source tree.
 
 - Cloud conversation resume gating: when a cloud conversation is closed from the UI (`pauseCloudSandbox` is called), the conversation's `conversation_url` is NOT cleared -- it still points to the old sandbox host. `WebSocketProviderWrapper` must suppress the URL (pass `null` to `ConversationWebSocketProvider`) while `sandbox_status === "PAUSED"`, otherwise the WebSocket immediately tries the stale URL before the sandbox wakes. Symmetrically, `useActiveConversation`'s refetch interval must fast-poll (3 s) on both `!conversation_url` AND `sandbox_status === "PAUSED"` -- checking only the missing URL would leave the hook on the 30 s interval while the sandbox is resuming. The resume sequence: navigate -> sandbox PAUSED detected -> `resumeCloudSandbox` called (in `conversation.tsx`) -> fast-poll detects RUNNING -> `conversationUrl` unblocked -> WebSocket connects.

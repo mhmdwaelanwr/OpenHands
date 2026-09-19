@@ -77,12 +77,12 @@ describe("mock-LLM run isolation", () => {
     );
     contexts.push(context);
 
-    expect(context.paths.userSkillsHostDir.startsWith(context.paths.runRoot)).toBe(
-      true,
-    );
-    expect(context.paths.skillReposHostDir.startsWith(context.paths.runRoot)).toBe(
-      true,
-    );
+    expect(
+      context.paths.userSkillsHostDir.startsWith(context.paths.runRoot),
+    ).toBe(true);
+    expect(
+      context.paths.skillReposHostDir.startsWith(context.paths.runRoot),
+    ).toBe(true);
     expect(existsSync(context.paths.userSkillsHostDir)).toBe(true);
   });
 

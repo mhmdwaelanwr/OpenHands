@@ -1,10 +1,5 @@
 import { randomBytes, randomInt } from "node:crypto";
-import {
-  mkdirSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import process from "node:process";
 
@@ -76,8 +71,15 @@ function sanitizeRunId(value: string): string {
 function parsePort(value: string | undefined, envName: string): number | null {
   if (value == null || value.trim() === "") return null;
   const port = Number.parseInt(value, 10);
-  if (!Number.isInteger(port) || String(port) !== value.trim() || port < 1 || port > 65_535) {
-    throw new Error(`${envName} must be an integer port between 1 and 65535 (got ${JSON.stringify(value)}).`);
+  if (
+    !Number.isInteger(port) ||
+    String(port) !== value.trim() ||
+    port < 1 ||
+    port > 65_535
+  ) {
+    throw new Error(
+      `${envName} must be an integer port between 1 and 65535 (got ${JSON.stringify(value)}).`,
+    );
   }
   return port;
 }
@@ -108,11 +110,7 @@ function readLeasePid(leaseDir: string): number | null {
   }
 }
 
-function tryClaimLease(
-  leaseDir: string,
-  runId: string,
-  pid: number,
-): boolean {
+function tryClaimLease(leaseDir: string, runId: string, pid: number): boolean {
   try {
     mkdirSync(leaseDir, { recursive: false });
   } catch (error) {
@@ -232,8 +230,7 @@ function allocatePorts(
       (maxBase - DYNAMIC_PORT_MIN) / DYNAMIC_PORT_STRIDE,
     );
     const base =
-      DYNAMIC_PORT_MIN +
-      randomInt(slotCount + 1) * DYNAMIC_PORT_STRIDE;
+      DYNAMIC_PORT_MIN + randomInt(slotCount + 1) * DYNAMIC_PORT_STRIDE;
     const defaults = dynamicPortBlock(base);
     if (hasCrossRoleCollision(defaults, explicit)) continue;
 
@@ -274,8 +271,7 @@ export function applyMockLlmRunContext(
   env.MOCK_LLM_AUTOMATION_DB_DIR = context.paths.automationDbDir;
   env.MOCK_LLM_SKILL_REPOS_HOST_DIR = context.paths.skillReposHostDir;
   env.MOCK_LLM_USER_SKILLS_HOST_DIR = context.paths.userSkillsHostDir;
-  env.MOCK_LLM_FOLDER_WORKSPACE_HOST_DIR =
-    context.paths.folderWorkspaceHostDir;
+  env.MOCK_LLM_FOLDER_WORKSPACE_HOST_DIR = context.paths.folderWorkspaceHostDir;
 }
 
 export function createMockLlmRunContext(
@@ -285,16 +281,14 @@ export function createMockLlmRunContext(
   const workspaceRoot = resolve(options.workspaceRoot ?? process.cwd());
   const pid = options.pid ?? process.pid;
   const runId = sanitizeRunId(
-    env.MOCK_LLM_RUN_ID?.trim() ||
-      `${pid}-${randomBytes(6).toString("hex")}`,
+    env.MOCK_LLM_RUN_ID?.trim() || `${pid}-${randomBytes(6).toString("hex")}`,
   );
   const runRoot = resolve(
     env.MOCK_LLM_RUN_ROOT?.trim() ||
       join(workspaceRoot, ".tmp", "mock-llm-runs", runId),
   );
   const leaseRoot = resolve(
-    options.leaseRoot ??
-      join(workspaceRoot, ".tmp", "mock-llm-port-leases"),
+    options.leaseRoot ?? join(workspaceRoot, ".tmp", "mock-llm-port-leases"),
   );
 
   const stateOverride =
@@ -390,9 +384,7 @@ export function cleanupMockLlmRunContext(context: MockLlmRunContext): void {
   }
 }
 
-export function installMockLlmRunCleanup(
-  context: MockLlmRunContext,
-): void {
+export function installMockLlmRunCleanup(context: MockLlmRunContext): void {
   if (!context.ownsLease) return;
   process.once("exit", () => cleanupMockLlmRunContext(context));
 }

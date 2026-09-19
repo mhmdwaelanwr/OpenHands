@@ -96,9 +96,9 @@ test.describe("mock-LLM image upload", () => {
 
     await resetMockLLM(request); // clears request history too
     await registerTrajectory(request, TRAJECTORY_NAME, [
-      { text: "" },              // 0: padding — absorbs any internal skill-activation call
+      { text: "" }, // 0: padding — absorbs any internal skill-activation call
       { text: IMAGE_REPLY_TOKEN }, // 1: agent's actual reply
-      { text: "" },              // 2: safety buffer for any follow-up internal call
+      { text: "" }, // 2: safety buffer for any follow-up internal call
     ]);
     await activateTrajectory(request, TRAJECTORY_NAME);
 
