@@ -1,6 +1,6 @@
 import { randomBytes, randomInt } from "node:crypto";
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import process from "node:process";
 
 export interface MockLlmPorts {
@@ -362,6 +362,20 @@ export function createMockLlmRunContext(
 
   applyMockLlmRunContext(context, env);
   return context;
+}
+
+export function scopedMockLlmArtifactPath(
+  basePath: string,
+  context: MockLlmRunContext,
+): string {
+  // Preserve the historical artifact paths for the one run that owns the
+  // legacy port set so existing CI/report tooling remains compatible. Any
+  // overlapping run gets a run-id suffix and cannot overwrite its reports
+  // or completion markers.
+  if (context.leaseDir && basename(context.leaseDir) === "legacy") {
+    return basePath;
+  }
+  return `${basePath}-${context.runId}`;
 }
 
 export function cleanupMockLlmRunContext(context: MockLlmRunContext): void {
