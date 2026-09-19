@@ -23,10 +23,22 @@ import { randomBytes } from "node:crypto";
 import {
   createMockLlmRunContext,
   installMockLlmRunCleanup,
+  scopedMockLlmArtifactPath,
 } from "./tests/e2e/mock-llm/run-isolation";
 
 const runContext = createMockLlmRunContext();
 installMockLlmRunCleanup(runContext);
+
+const TEST_RESULTS_DIR = scopedMockLlmArtifactPath(
+  "test-results-mock-llm",
+  runContext,
+);
+const HTML_REPORT_DIR = scopedMockLlmArtifactPath(
+  "playwright-report-mock-llm",
+  runContext,
+);
+const MARKER_DIR = scopedMockLlmArtifactPath(".mock-llm-markers", runContext);
+process.env.MOCK_LLM_MARKER_DIR = MARKER_DIR;
 
 // ── Per-run port reservation ──────────────────────────────────────────
 // The first local run keeps the historical ports. Concurrent runs receive
@@ -102,11 +114,11 @@ export default defineConfig({
   globalTimeout: process.env.CI ? ciGlobalTimeoutMs : 0, // 20 min hard cap in CI
   reporter: [
     ["line"],
-    ["json", { outputFile: "test-results-mock-llm/results.json" }],
-    ["html", { outputFolder: "playwright-report-mock-llm", open: "never" }],
+    ["json", { outputFile: `${TEST_RESULTS_DIR}/results.json` }],
+    ["html", { outputFolder: HTML_REPORT_DIR, open: "never" }],
     ["./tests/e2e/mock-llm/reporters/done-marker-reporter.ts"],
   ],
-  outputDir: "test-results-mock-llm",
+  outputDir: TEST_RESULTS_DIR,
   use: {
     baseURL: INGRESS_URL,
     screenshot: "only-on-failure",
