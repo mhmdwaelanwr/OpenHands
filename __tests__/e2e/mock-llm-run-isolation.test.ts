@@ -13,6 +13,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   cleanupMockLlmRunContext,
   createMockLlmRunContext,
+  scopedMockLlmArtifactPath,
   type MockLlmRunContext,
 } from "../../tests/e2e/mock-llm/run-isolation";
 
@@ -63,6 +64,10 @@ describe("mock-LLM run isolation", () => {
     // forced onto a separate leased block rather than sharing them.
     expect(first.ports.ingress).toBe(18300);
     expect(second.ports.ingress).not.toBe(18300);
+    expect(scopedMockLlmArtifactPath("results", first)).toBe("results");
+    expect(scopedMockLlmArtifactPath("results", second)).toBe(
+      `results-${second.runId}`,
+    );
   });
 
   it("keeps user-skill fixtures inside the run root by default", () => {
