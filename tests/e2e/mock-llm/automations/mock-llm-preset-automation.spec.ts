@@ -32,6 +32,7 @@ import {
   registerTrajectory,
   activateTrajectory,
   resetMockLLM,
+  resetMcpConfig,
   ensureMockLLMProfile,
   setChatInput,
 } from "../utils/mock-llm-helpers";
@@ -123,17 +124,11 @@ test.describe("preset automation → slash command conversation", () => {
         // best-effort cleanup
       }
     }
-    await resetMockLLM(request).catch(() => {});
-    // Clear any MCP servers so subsequent tests start clean
-    await request
-      .patch(`${BACKEND_URL}/api/settings`, {
-        headers: {
-          "X-Session-API-Key": SESSION_API_KEY,
-          "Content-Type": "application/json",
-        },
-        data: { agent_settings_diff: { mcp_config: null } },
-      })
-      .catch(() => {});
+    await resetMockLLM(request);
+    // Clear any MCP servers so subsequent tests start clean. Both cleanup
+    // operations retry transient failures and fail the suite if state cannot
+    // be restored deterministically.
+    await resetMcpConfig(request);
   });
 
   // ── Test 1: automation card sends the correct slash command ────────
