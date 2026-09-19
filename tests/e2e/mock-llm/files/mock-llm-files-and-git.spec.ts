@@ -83,17 +83,9 @@ test.describe("files tab, conversation overview git, and browser tab", () => {
 
   test.afterAll(async ({ request }) => {
     for (const id of Array.from(conversationIds)) {
-      try {
-        await deleteConversation(request, id);
-      } catch {
-        // best-effort
-      }
+      await deleteConversation(request, id);
     }
-    try {
-      await resetMockLLM(request);
-    } catch {
-      // best-effort
-    }
+    await resetMockLLM(request);
   });
 
   // ── Step 1: Setup LLM profile ──────────────────────────────────────
