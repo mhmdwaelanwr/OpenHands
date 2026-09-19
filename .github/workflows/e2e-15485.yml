@@ -1,0 +1,116 @@
+name: E2E issue 15485
+
+on:
+  push:
+    branches:
+      - fix/mock-llm-run-isolation-15485
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  concurrent-npm-smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v7
+        with:
+          ref: fix/mock-llm-run-isolation-15485
+
+      - name: Read pinned backend versions
+        id: defaults
+        run: |
+          echo "agent_server_version=$(node -p "require('./config/defaults.json').versions.agentServer")" >> "$GITHUB_OUTPUT"
+          echo "automation_version=$(node -p "require('./config/defaults.json').versions.automation")" >> "$GITHUB_OUTPUT"
+          echo "acp_constraint=$(node -p "require('./config/defaults.json').constraints.agentClientProtocol")" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24.15"
+          cache: npm
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        run: |
+          npx playwright install chromium
+          npx playwright install-deps chromium
+
+      - name: Install uv and mock LLM backend
+        env:
+          AGENT_SERVER_VERSION: ${{ steps.defaults.outputs.agent_server_version }}
+          ACP_CONSTRAINT: ${{ steps.defaults.outputs.acp_constraint }}
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          "$HOME/.local/bin/uv" venv .mock-llm-venv
+          "$HOME/.local/bin/uv" pip install -p .mock-llm-venv "openhands-sdk==$AGENT_SERVER_VERSION" "$ACP_CONSTRAINT"
+
+      - name: Pre-warm automation backend
+        env:
+          AUTOMATION_VERSION: ${{ steps.defaults.outputs.automation_version }}
+        run: |
+          "$HOME/.local/bin/uvx" --from "openhands-automation==$AUTOMATION_VERSION" python -c "from openhands.automation.app import app; print('automation package cached')"
+
+      - name: Build frontend
+        env:
+          VITE_ENABLE_BROWSER_TOOLS: "false"
+        run: npm run build:app
+
+      - name: Run two production-path mock LLM stacks concurrently
+        env:
+          MOCK_LLM_PYTHON: .mock-llm-venv/bin/python3
+          MOCK_LLM_GLOBAL_TIMEOUT_MS: "360000"
+        shell: bash
+        run: |
+          set -uo pipefail
+          mkdir -p "$HOME/.openhands/skills"
+          printf 'do-not-touch\n' > "$HOME/.openhands/skills/issue-15485-sentinel"
+
+          MOCK_LLM_RUN_ID=concurrent-a             npx playwright test               --config=playwright.mock-llm.config.ts               tests/e2e/mock-llm/mcp/mock-llm-mcp-github.spec.ts               --grep "step 1: GitHub card is visible"               > /tmp/concurrent-a.log 2>&1 &
+          pid_a=$!
+
+          MOCK_LLM_RUN_ID=concurrent-b             npx playwright test               --config=playwright.mock-llm.config.ts               tests/e2e/mock-llm/skills/mock-llm-skills.spec.ts               --grep "user skill in ~/.openhands/skills/"               > /tmp/concurrent-b.log 2>&1 &
+          pid_b=$!
+
+          set +e
+          wait "$pid_a"
+          rc_a=$?
+          wait "$pid_b"
+          rc_b=$?
+          set -e
+
+          echo "===== concurrent-a ====="
+          cat /tmp/concurrent-a.log
+          echo "===== concurrent-b ====="
+          cat /tmp/concurrent-b.log
+
+          test "$rc_a" -eq 0
+          test "$rc_b" -eq 0
+
+          # The user-skill E2E exercised its normal path without writing its
+          # fixture into the developer's real home.
+          test "$(cat "$HOME/.openhands/skills/issue-15485-sentinel")" = "do-not-touch"
+          test ! -e "$HOME/.openhands/skills/e2e-test-user-skill"
+
+          # Normal Playwright teardown releases run-owned state and port leases.
+          test ! -e .tmp/mock-llm-runs/concurrent-a
+          test ! -e .tmp/mock-llm-runs/concurrent-b
+          if [ -d .tmp/mock-llm-port-leases ]; then
+            test -z "$(find .tmp/mock-llm-port-leases -mindepth 1 -maxdepth 1 -type d -print -quit)"
+          fi
+
+          # Both processes produced independent Playwright result trees: one
+          # keeps the historical path and the overlapping run gets a run-id suffix.
+          artifact_count=0
+          for d in             test-results-mock-llm             test-results-mock-llm-concurrent-a             test-results-mock-llm-concurrent-b; do
+            if [ -d "$d" ]; then
+              artifact_count=$((artifact_count + 1))
+              echo "artifact dir: $d"
+            fi
+          done
+          test "$artifact_count" -eq 2
