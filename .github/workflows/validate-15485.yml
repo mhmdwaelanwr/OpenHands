@@ -45,6 +45,7 @@ jobs:
             tests/e2e/mock-llm/run-isolation.ts
             tests/e2e/mock-llm/utils/skill-test-helpers.ts
             tests/e2e/mock-llm/utils/mock-llm-helpers.ts
+            tests/e2e/mock-llm/reporters/done-marker-reporter.ts
             __tests__/e2e/mock-llm-run-isolation.test.ts
             tests/e2e/mock-llm/mcp/mock-llm-mcp-github.spec.ts
             tests/e2e/mock-llm/mcp/mock-llm-mcp-slack-credentials.spec.ts
