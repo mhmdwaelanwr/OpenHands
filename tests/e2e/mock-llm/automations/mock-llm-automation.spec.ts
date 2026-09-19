@@ -211,20 +211,33 @@ async function waitForRunStatus(
   );
 }
 
-/**
- * Delete an automation (best-effort cleanup).
- */
+/** Delete an automation, retrying transient failures before surfacing them. */
 async function deleteAutomation(
   request: import("@playwright/test").APIRequestContext,
   automationId: string,
 ) {
-  await request.delete(
-    `${AUTOMATION_API_BASE}/${encodeURIComponent(automationId)}`,
-    {
-      headers: {
-        "X-Session-API-Key": SESSION_API_KEY,
-      },
-    },
+  const url = `${AUTOMATION_API_BASE}/${encodeURIComponent(automationId)}`;
+  let lastStatus = 0;
+  for (let attempt = 1; attempt <= 4; attempt++) {
+    try {
+      const resp = await request.delete(url, {
+        headers: { "X-Session-API-Key": SESSION_API_KEY },
+      });
+      lastStatus = resp.status();
+      if (resp.ok() || resp.status() === 404) return;
+      if (![502, 503].includes(resp.status()) || attempt === 4) break;
+    } catch (error) {
+      if (
+        attempt === 4 ||
+        !/socket hang up|ECONNRESET|ECONNREFUSED/i.test(String(error))
+      ) {
+        throw error;
+      }
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+  throw new Error(
+    `Failed to delete automation ${automationId}: HTTP ${lastStatus || "request error"}`,
   );
 }
 
@@ -263,12 +276,8 @@ test.describe("mock-LLM automation lifecycle", () => {
     // Clean up conversations but NOT automations — step 3 needs the
     // automation created in step 2 to verify it appears on the page.
     for (const id of Array.from(conversationIds)) {
-      try {
-        await deleteConversation(request, id);
-        conversationIds.delete(id);
-      } catch {
-        // best-effort cleanup
-      }
+      await deleteConversation(request, id);
+      conversationIds.delete(id);
     }
   });
 
@@ -277,20 +286,12 @@ test.describe("mock-LLM automation lifecycle", () => {
   // registered in step 1 for activation in step 2.
   test.afterAll(async ({ request }) => {
     for (const id of Array.from(automationIds)) {
-      try {
-        await deleteAutomation(request, id);
-      } catch {
-        // best-effort
-      }
+      await deleteAutomation(request, id);
     }
     automationIds.clear();
 
     // Reset mock LLM so subsequent test suites start fresh.
-    try {
-      await resetMockLLM(request);
-    } catch {
-      // best-effort — the mock server may have already shut down
-    }
+    await resetMockLLM(request);
   });
 
   // ── Step 1: Ensure LLM profile + register the automation trajectory ─
@@ -667,12 +668,8 @@ test.describe("mock-LLM automation lifecycle", () => {
     // Clean up automations at the end of the last test
     await test.step("cleanup automations", async () => {
       for (const id of Array.from(automationIds)) {
-        try {
-          await deleteAutomation(request, id);
-          automationIds.delete(id);
-        } catch {
-          // best-effort
-        }
+        await deleteAutomation(request, id);
+        automationIds.delete(id);
       }
     });
   });
